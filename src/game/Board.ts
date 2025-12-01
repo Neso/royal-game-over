@@ -31,6 +31,7 @@ export class Board {
     spaceLayer: Container;
     pieceLayer: Container;
     pieceTokens: Map<string, Graphics>;
+    hoverIndicator: Graphics;
 
     constructor(app: Application) {
         this.app = app;
@@ -43,6 +44,8 @@ export class Board {
         this.spaceLayer = new Container();
         this.pieceLayer = new Container();
         this.pieceTokens = new Map(); // key: `${playerId}:${pieceId}`
+        this.hoverIndicator = new Graphics();
+        this.hoverIndicator.visible = false;
     }
 
     async init() {
@@ -57,6 +60,7 @@ export class Board {
         this.app.stage.addChild(this.sprite);
         this.app.stage.addChild(this.spaceLayer);
         this.app.stage.addChild(this.pieceLayer);
+        this.app.stage.addChild(this.hoverIndicator);
 
         this.applyBoardConfig(boardConfig);
         this.drawBoardSpaces();
@@ -92,6 +96,7 @@ export class Board {
         this.applyScaleAndPosition();
         this.updateSpacePositions();
         this.redrawBoardSpaces();
+        this.clearHover();
     }
 
     cellToWorld(col: number, row: number) {
@@ -158,6 +163,20 @@ export class Board {
         this.spaces.forEach(space => {
             space.position = this.cellToWorld(space.col, space.row);
         });
+    }
+
+    showHover(position: { x: number; y: number }) {
+        this.hoverIndicator.clear();
+        this.hoverIndicator.lineStyle(3, 0xffc107, 0.9);
+        this.hoverIndicator.beginFill(0xffc107, 0.2);
+        this.hoverIndicator.drawCircle(position.x, position.y, 18);
+        this.hoverIndicator.endFill();
+        this.hoverIndicator.visible = true;
+    }
+
+    clearHover() {
+        this.hoverIndicator.clear();
+        this.hoverIndicator.visible = false;
     }
 
     getSpaceForPlayer(playerId: number, pathIndex: number) {

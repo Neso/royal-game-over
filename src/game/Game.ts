@@ -300,6 +300,10 @@ export class Game {
         this.board.pieceTokens.forEach((token, key) => {
             token.off('pointertap');
             token.on('pointertap', () => this.handlePieceClick(key));
+            token.off('pointerover');
+            token.off('pointerout');
+            token.on('pointerover', () => this.handlePieceHover(key));
+            token.on('pointerout', () => this.handlePieceHoverEnd());
         });
     }
 
@@ -338,6 +342,7 @@ export class Game {
         this.updateStatus(this.turnStatusText());
         this.logPanel?.append(`${this.players[this.currentPlayer].name} turn`);
         this.updateTokenHighlights();
+        this.board.clearHover();
         if (this.isCurrentPlayerAI()) {
             this.enableRoll(false);
             this.enableConfirm(false);
@@ -521,6 +526,8 @@ export class Game {
         this.board.updatePieces(this.getAllPieces());
         this.statistics?.syncPieces(this.players);
         this.updateTokenHighlights();
+        this.board.clearHover();
+        this.board.clearHover();
         const isRosetta =
             move.targetSpace?.isRosetta ||
             (move.finishes && false); // finish does not trigger re-roll
@@ -557,6 +564,7 @@ export class Game {
         if (this.lastRoll !== null) {
             this.updateStatus(`Player ${this.currentPlayer + 1}: choose a piece`);
         }
+        this.board.clearHover();
     }
 
     advanceTurn() {
@@ -625,6 +633,42 @@ export class Game {
             token.eventMode = disabled ? 'none' : 'static';
             token.cursor = disabled ? 'not-allowed' : 'pointer';
         });
+    }
+
+    handlePieceHover(key: string) {
+        if (this.lastRoll === null || this.lastRoll === 0) {
+            this.board.clearHover();
+            return;
+        }
+        const [playerIdStr, pieceIdStr] = key.split(':');
+        const playerId = Number(playerIdStr);
+        if (playerId !== this.currentPlayer) {
+            this.board.clearHover();
+            return;
+        }
+        const piece = this.players[playerId].pieces[Number(pieceIdStr)];
+        if (piece.isFinished()) {
+            this.board.clearHover();
+            return;
+        }
+        const move = this.tryPrepareMove(piece, this.lastRoll);
+        if (!move) {
+            this.board.clearHover();
+            return;
+        }
+        let targetPosition;
+        if (move.finishes) {
+            targetPosition = this.board.finishedPosition(piece.playerId, piece.id);
+        } else if (move.targetSpace) {
+            targetPosition = move.targetSpace.position;
+        } else {
+            targetPosition = this.board.homePosition(piece.playerId, piece.id);
+        }
+        this.board.showHover(targetPosition);
+    }
+
+    handlePieceHoverEnd() {
+        this.board.clearHover();
     }
 
     isCurrentPlayerAI() {
