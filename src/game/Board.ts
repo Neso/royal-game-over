@@ -1,5 +1,6 @@
 import { Application, Container, Sprite, Assets, Graphics } from 'pixi.js';
 import { Piece } from './Piece.js';
+import boardTextureUrl from '../assets/board.png';
 
 export type BoardSpace = {
     id: string;
@@ -33,7 +34,8 @@ export class Board {
     }
 
     async init() {
-        const texture = Assets.get('/src/assets/board.png');
+        await Assets.load(boardTextureUrl);
+        const texture = Assets.get(boardTextureUrl);
         this.sprite = new Sprite(texture);
         this.sprite.anchor.set(0.5);
         this.sprite.x = this.app.screen.width / 2;

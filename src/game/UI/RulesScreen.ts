@@ -1,4 +1,5 @@
 import { Application, Container, Text, Graphics, Rectangle } from 'pixi.js';
+import rulesTextUrl from '../../assets/rules.txt';
 
 export class RulesScreen extends Container {
     app: Application;
@@ -39,7 +40,7 @@ export class RulesScreen extends Container {
         this.addChild(scrollContainer);
 
         // Load rules text
-        const rulesTextContent = await fetch('/src/assets/rules.txt').then(res => res.text());
+        const rulesTextContent = await fetch(rulesTextUrl).then(res => res.text());
 
         const rulesText = new Text(rulesTextContent, {
             fill: 0xffffff,
