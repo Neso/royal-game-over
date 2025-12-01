@@ -46,7 +46,13 @@ export class JimmyAI {
             return this.pickDeterministic(exitMoves);
         }
 
-        // Priority 4: advance closest-to-exit, non-fort
+        // Priority 4: enter from hand (fallback above general advance)
+        const entryMoves = moves.filter(m => m.piece.positionIndex === null);
+        if (entryMoves.length) {
+            return this.pickDeterministic(entryMoves);
+        }
+
+        // Priority 5: advance closest-to-exit, non-fort
         const nonFortMoves = moves
             .map(move => {
                 const space = this.getCurrentSpace(move.piece);
@@ -66,7 +72,7 @@ export class JimmyAI {
             }
         }
 
-        // Priority 5: from fort (either capture or only option)
+        // Priority 6: from fort (either capture or only option)
         const fortMoves = moves
             .map(move => {
                 const space = this.getCurrentSpace(move.piece);
