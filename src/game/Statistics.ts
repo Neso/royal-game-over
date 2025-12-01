@@ -16,8 +16,10 @@ export class Statistics {
     container: Container;
     data: Record<number, PlayerStats>;
     rows: Record<number, Text>;
+    headers: Record<number, Text>;
     round: number;
     roundText: Text | null;
+    startingPlayer: number | null;
 
     constructor(app: any) {
         this.app = app;
@@ -27,8 +29,10 @@ export class Statistics {
             1: { counts: [0, 0, 0, 0, 0], total: 0, captures: 0, bonuses: 0, waiting: 0, home: 0 }
         };
         this.rows = {};
+        this.headers = {};
         this.round = 1;
         this.roundText = null;
+        this.startingPlayer = null;
     }
 
     init(opts: { x: number; y: number; width?: number; height?: number }) {
@@ -55,10 +59,11 @@ export class Statistics {
 
         const colWidth = (width - 30) / 2;
         [0, 1].forEach(playerId => {
-            const header = new Text(`Player ${playerId + 1}`, { fill: 0xffffff, fontSize: 12 });
+            const header = new Text('', { fill: 0xffffff, fontSize: 12 });
             header.x = 10 + playerId * (colWidth + 10);
             header.y = 32;
             this.container.addChild(header);
+            this.headers[playerId] = header;
 
             const row = new Text('', { fill: 0xffffff, fontSize: 11 });
             row.x = header.x + 4;
@@ -67,6 +72,7 @@ export class Statistics {
             this.container.addChild(row);
         });
 
+        this.renderHeaders();
         this.render();
     }
 
@@ -74,7 +80,9 @@ export class Statistics {
         this.data[0] = { counts: [0, 0, 0, 0, 0], total: 0, captures: 0, bonuses: 0, waiting: 0, home: 0 };
         this.data[1] = { counts: [0, 0, 0, 0, 0], total: 0, captures: 0, bonuses: 0, waiting: 0, home: 0 };
         this.round = 1;
+        this.startingPlayer = null;
         this.updateRoundText();
+        this.renderHeaders();
         this.render();
     }
 
@@ -84,6 +92,20 @@ export class Statistics {
         this.data[playerId].counts[clamped] += 1;
         this.data[playerId].total += 1;
         this.render();
+    }
+
+    setStartingPlayer(playerId: number) {
+        this.startingPlayer = playerId;
+        this.renderHeaders();
+    }
+
+    private renderHeaders() {
+        [0, 1].forEach(playerId => {
+            const header = this.headers[playerId];
+            if (!header) return;
+            const isStarter = this.startingPlayer === playerId;
+            header.text = `Player ${playerId + 1}${isStarter ? ' (start)' : ''}`;
+        });
     }
 
     setRound(round: number) {

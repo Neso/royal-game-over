@@ -30,6 +30,7 @@ export class Game {
     players: Player[];
     currentPlayer: number;
     round: number;
+    startingPlayer: number;
     pendingMove: PendingMove | null;
     lastRoll: number | null;
     passTimeout: ReturnType<typeof setTimeout> | null;
@@ -52,6 +53,7 @@ export class Game {
         this.players = [new Player(0, 0x1565c0), new Player(1, 0xffffff)];
         this.currentPlayer = 0;
         this.round = 1;
+        this.startingPlayer = 0;
         this.pendingMove = null;
         this.lastRoll = null;
         this.passTimeout = null;
@@ -219,13 +221,14 @@ export class Game {
 
     resetGameState() {
         this.players.forEach(player => player.reset());
-        this.currentPlayer = 0;
+        this.startingPlayer = Math.random() < 0.5 ? 0 : 1;
+        this.currentPlayer = this.startingPlayer;
         this.round = 1;
         this.pendingMove = null;
         this.lastRoll = null;
         this.clearScheduledAdvance();
         this.board.updatePieces(this.getAllPieces());
-        this.updateStatus('Player 1: roll the dice');
+        this.updateStatus(`Player ${this.currentPlayer + 1}: roll the dice`);
         this.enableRoll(true);
         this.enableConfirm(false);
         this.enableCancel(false);
@@ -233,9 +236,11 @@ export class Game {
         const startStamp = new Date().toLocaleTimeString();
         this.logPanel?.append(`Game started at ${startStamp}`);
         this.logPanel?.append('New game started');
-        this.logPanel?.append('Player 1 turn');
+        this.logPanel?.append(`Round ${this.round}`);
+        this.logPanel?.append(`Starting player: Player ${this.currentPlayer + 1}`);
         this.statistics?.reset();
         this.statistics?.setRound(this.round);
+        this.statistics?.setStartingPlayer(this.startingPlayer);
         this.statistics?.syncPieces(this.players);
 
         // wire piece tokens for interaction
@@ -468,9 +473,10 @@ export class Game {
         this.pendingMove = null;
         this.lastRoll = null;
         this.currentPlayer = this.currentPlayer === 0 ? 1 : 0;
-        if (previousPlayer === 1 && this.currentPlayer === 0) {
+        if (previousPlayer !== this.startingPlayer && this.currentPlayer === this.startingPlayer) {
             this.round += 1;
             this.statistics?.setRound(this.round);
+            this.logPanel?.append(`Round ${this.round}`);
         }
         this.enableConfirm(false);
         this.enableCancel(false);
