@@ -1,0 +1,61 @@
+{
+  "grid": { "cols": 3, "rows": 8 },
+  "spaces": [
+    { "id": "shared-0", "col": 1, "row": 0 },
+    { "id": "shared-1", "col": 1, "row": 1 },
+    { "id": "shared-2", "col": 1, "row": 2 },
+    { "id": "shared-3", "col": 1, "row": 3 },
+    { "id": "shared-4", "col": 1, "row": 4, "isRosetta": true, "isFort": true },
+    { "id": "shared-5", "col": 1, "row": 5 },
+    { "id": "shared-6", "col": 1, "row": 6 },
+    { "id": "shared-7", "col": 1, "row": 7 },
+
+    { "id": "black-0", "col": 0, "row": 0, "isSafe": true },
+    { "id": "black-1", "col": 0, "row": 1, "isSafe": true, "isRosetta": true },
+    { "id": "black-4", "col": 0, "row": 4, "isSafe": true },
+    { "id": "black-5", "col": 0, "row": 5, "isSafe": true },
+    { "id": "black-6", "col": 0, "row": 6, "isSafe": true },
+    { "id": "black-7", "col": 0, "row": 7, "isSafe": true, "isRosetta": true },
+
+    { "id": "white-0", "col": 2, "row": 0, "isSafe": true },
+    { "id": "white-1", "col": 2, "row": 1, "isSafe": true, "isRosetta": true },
+    { "id": "white-4", "col": 2, "row": 4, "isSafe": true },
+    { "id": "white-5", "col": 2, "row": 5, "isSafe": true },
+    { "id": "white-6", "col": 2, "row": 6, "isSafe": true },
+    { "id": "white-7", "col": 2, "row": 7, "isSafe": true, "isRosetta": true }
+  ],
+  "paths": {
+    "0": [
+      "black-4",
+      "black-5",
+      "black-6",
+      "black-7",
+      "shared-7",
+      "shared-6",
+      "shared-5",
+      "shared-4",
+      "shared-3",
+      "shared-2",
+      "shared-1",
+      "shared-0",
+      "black-0",
+      "black-1"
+    ],
+    "1": [
+      "white-4",
+      "white-5",
+      "white-6",
+      "white-7",
+      "shared-7",
+      "shared-6",
+      "shared-5",
+      "shared-4",
+      "shared-3",
+      "shared-2",
+      "shared-1",
+      "shared-0",
+      "white-0",
+      "white-1"
+    ]
+  }
+}

@@ -1,6 +1,7 @@
 import { Application, Container, Sprite, Assets, Graphics } from 'pixi.js';
 import { Piece } from './Piece.js';
 import boardTextureUrl from '../assets/board.png';
+import boardConfig from '../assets/boardConfig.json' with { type: 'json' };
 
 export type BoardSpace = {
     id: string;
@@ -10,6 +11,13 @@ export type BoardSpace = {
     isRosetta?: boolean;
     isFort?: boolean;
     isSafe?: boolean;
+};
+
+type BoardSpaceConfig = Omit<BoardSpace, 'position'>;
+type BoardConfig = {
+    grid: { cols: number; rows: number };
+    spaces: BoardSpaceConfig[];
+    paths: Record<number, string[]>;
 };
 
 export class Board {
@@ -50,8 +58,24 @@ export class Board {
         this.app.stage.addChild(this.spaceLayer);
         this.app.stage.addChild(this.pieceLayer);
 
-        this.initBoardSpaces();
+        this.applyBoardConfig(boardConfig);
         this.drawBoardSpaces();
+    }
+
+    applyBoardConfig(config: BoardConfig) {
+        this.grid = config.grid;
+        this.spaces = config.spaces.map(space => ({
+            ...space,
+            position: this.cellToWorld(space.col, space.row)
+        }));
+
+        this.paths = {};
+        Object.entries(config.paths).forEach(([playerIdStr, ids]) => {
+            const playerId = Number(playerIdStr);
+            this.paths[playerId] = ids
+                .map(id => this.findSpace(id))
+                .filter(Boolean) as BoardSpace[];
+        });
     }
 
     applyScaleAndPosition() {
@@ -83,100 +107,6 @@ export class Board {
             cellWidth: this.sprite.width / this.grid.cols,
             cellHeight: this.sprite.height / this.grid.rows
         };
-    }
-
-    initBoardSpaces() {
-        const leftCol = 0;  // black/blue side
-        const midCol = 1;   // shared
-        const rightCol = 2; // white side
-
-        // Rows are 0 (top) to 7 (bottom)
-        // Layout per spec:
-        // Row0: black, shared, white
-        // Row1: black rosetta, shared, white rosetta
-        // Row2: shared
-        // Row3: shared
-        // Row4: black, shared (rosetta + fort), white
-        // Row5: black, shared, white
-        // Row6: black, shared, white
-        // Row7: black rosetta, shared, white rosetta
-
-        const makeSpace = (id, col, row, flags = {}) => ({
-            id,
-            col,
-            row,
-            ...flags,
-            position: this.cellToWorld(col, row)
-        });
-
-        const sharedSpaces = [
-            makeSpace('shared-0', midCol, 0, {}),
-            makeSpace('shared-1', midCol, 1, {}),
-            makeSpace('shared-2', midCol, 2, {}),
-            makeSpace('shared-3', midCol, 3, {}),
-            makeSpace('shared-4', midCol, 4, { isRosetta: true, isFort: true }), // fort rosetta
-            makeSpace('shared-5', midCol, 5, {}),
-            makeSpace('shared-6', midCol, 6, {}),
-            makeSpace('shared-7', midCol, 7, {})
-        ];
-
-        const blackSpaces = [
-            makeSpace('black-0', leftCol, 0, { isSafe: true }),
-            makeSpace('black-1', leftCol, 1, { isSafe: true, isRosetta: true }),
-            makeSpace('black-4', leftCol, 4, { isSafe: true }),
-            makeSpace('black-5', leftCol, 5, { isSafe: true }),
-            makeSpace('black-6', leftCol, 6, { isSafe: true }),
-            makeSpace('black-7', leftCol, 7, { isSafe: true, isRosetta: true })
-        ];
-
-        const whiteSpaces = [
-            makeSpace('white-0', rightCol, 0, { isSafe: true }),
-            makeSpace('white-1', rightCol, 1, { isSafe: true, isRosetta: true }),
-            makeSpace('white-4', rightCol, 4, { isSafe: true }),
-            makeSpace('white-5', rightCol, 5, { isSafe: true }),
-            makeSpace('white-6', rightCol, 6, { isSafe: true }),
-            makeSpace('white-7', rightCol, 7, { isSafe: true, isRosetta: true })
-        ];
-
-        this.spaces = [...sharedSpaces, ...blackSpaces, ...whiteSpaces];
-
-        // Black/blue path: enter at black-4 -> black-5 -> black-6 -> black-7 (rosetta)
-        // then shared 7→6→5→4(rosetta+fort)→3→2→1→0 -> black-0 -> black-1 (rosetta) -> exit
-        this.paths[0] = [
-            this.findSpace('black-4'),
-            this.findSpace('black-5'),
-            this.findSpace('black-6'),
-            this.findSpace('black-7'),
-            this.findSpace('shared-7'),
-            this.findSpace('shared-6'),
-            this.findSpace('shared-5'),
-            this.findSpace('shared-4'),
-            this.findSpace('shared-3'),
-            this.findSpace('shared-2'),
-            this.findSpace('shared-1'),
-            this.findSpace('shared-0'),
-            this.findSpace('black-0'),
-            this.findSpace('black-1')
-        ];
-
-        // White path mirrors on right: enter white-4 -> white-5 -> white-6 -> white-7(rosetta)
-        // then shared 7→6→5→4(rosetta+fort)→3→2→1→0 -> white-0 -> white-1(rosetta) -> exit
-        this.paths[1] = [
-            this.findSpace('white-4'),
-            this.findSpace('white-5'),
-            this.findSpace('white-6'),
-            this.findSpace('white-7'),
-            this.findSpace('shared-7'),
-            this.findSpace('shared-6'),
-            this.findSpace('shared-5'),
-            this.findSpace('shared-4'),
-            this.findSpace('shared-3'),
-            this.findSpace('shared-2'),
-            this.findSpace('shared-1'),
-            this.findSpace('shared-0'),
-            this.findSpace('white-0'),
-            this.findSpace('white-1')
-        ];
     }
 
     findSpace(id: string) {
