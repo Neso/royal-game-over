@@ -1,0 +1,28 @@
+# Royal Game of War - Rules
+
+## Objective
+Be the first player to move all 7 of your pieces off the board.
+
+## Setup
+- Each player starts with 7 pieces off the board.
+- The board has an Entry Area, a Shared Line (Community/War Area), and a Final Safe Area.
+
+## Dice Mechanics
+- Players roll four tetrahedral (d4) dice.
+- A die showing 3 or 4 counts as a success.
+- The total number of successful dice determines the number of spaces a player can move.
+
+## Movement Rules
+- Players choose any single piece to move.
+- Landing on an opponent's piece removes it back to their starting hand, unless the position is a 'fort spot'.
+- Fort spots in the Community Area protect pieces from being removed.
+
+## Special Spots (Rosetta Spaces)
+- The 4th spot of the Entry Area: Repeat dice roll.
+- The 4th spot of the Community Area: Repeat dice roll.
+- The spot just before exit: Repeat dice roll.
+
+## Winning Condition
+- The first player to move all 7 pieces off the board wins instantly.
+
+Good luck, commander!
