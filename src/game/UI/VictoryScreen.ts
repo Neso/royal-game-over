@@ -3,12 +3,14 @@ import { Application, Container, Text, Graphics } from 'pixi.js';
 export class VictoryScreen extends Container {
     app: Application;
     onBackToMainMenu: () => void;
+    subText: Text | null;
 
     constructor(app: Application, onBackToMainMenu: () => void) {
         super();
         this.app = app;
         this.onBackToMainMenu = onBackToMainMenu;
         this.visible = false; // Hidden by default
+        this.subText = null;
         this.setupVictoryScreen();
     }
 
@@ -35,6 +37,12 @@ export class VictoryScreen extends Container {
         victoryText.anchor.set(0.5);
         victoryText.y = -50;
         this.addChild(victoryText);
+
+        const subText = new Text('', { fill: 0xffffff, fontSize: 18, align: 'center' });
+        subText.anchor.set(0.5);
+        subText.y = 10;
+        this.subText = subText;
+        this.addChild(subText);
 
         // Back to Main Menu Button
         const backButton = this.createButton('Back to Main Menu', this.onBackToMainMenu);
@@ -72,5 +80,11 @@ export class VictoryScreen extends Container {
 
     hide() {
         this.visible = false;
+    }
+
+    setWinner(name: string) {
+        if (this.subText) {
+            this.subText.text = `${name} wins!`;
+        }
     }
 }

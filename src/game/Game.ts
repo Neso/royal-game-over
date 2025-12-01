@@ -42,8 +42,8 @@ export class Game {
     controls: Container | null;
     statusText: Text | null;
     rollButton!: Container;
-    confirmButton!: Container;
-    cancelButton!: Container;
+    confirmButton?: Container;
+    cancelButton?: Container;
 
     constructor() {
         this.app = new Application();
@@ -116,12 +116,8 @@ export class Game {
         this.controls.addChild(panel);
 
         this.rollButton = this.createButton('Roll Dice', () => this.handleRoll(), 10, 10);
-        this.confirmButton = this.createButton('Confirm Move', () => this.confirmMove(), 10, 60);
-        this.cancelButton = this.createButton('Cancel', () => this.cancelMove(), 120, 60);
-
         this.controls.addChild(this.rollButton);
-        this.controls.addChild(this.confirmButton);
-        this.controls.addChild(this.cancelButton);
+        // Confirm/Cancel removed; moves execute immediately
 
         this.statusText = new Text('Ready', {
             fill: 0xffffff,
@@ -236,10 +232,13 @@ export class Game {
         }
     }
 
-    showVictoryScreen() {
+    showVictoryScreen(winnerName?: string) {
         this.mainMenu.hide();
         this.rulesScreen.hide();
         this.victoryScreen.show();
+        if (winnerName) {
+            this.victoryScreen.setWinner(winnerName);
+        }
         this.controls.visible = false;
         if (this.statistics?.container) {
             this.statistics.container.visible = false;
@@ -283,8 +282,6 @@ export class Game {
         this.board.updatePieces(this.getAllPieces());
         this.updateStatus(this.turnStatusText());
         this.enableRoll(true);
-        this.enableConfirm(false);
-        this.enableCancel(false);
         this.logPanel?.reset();
         const startStamp = new Date().toLocaleTimeString();
         this.logPanel?.append(`Game started at ${startStamp}`);
@@ -322,31 +319,17 @@ export class Game {
         this.rollButton.eventMode = enabled ? 'static' : 'none';
     }
 
-    enableConfirm(enabled) {
-        this.confirmButton.alpha = enabled ? 1 : 0.4;
-        this.confirmButton.eventMode = enabled ? 'static' : 'none';
-    }
-
-    enableCancel(enabled) {
-        this.cancelButton.alpha = enabled ? 1 : 0.4;
-        this.cancelButton.eventMode = enabled ? 'static' : 'none';
-    }
-
     beginTurn() {
         this.pendingMove = null;
         this.lastRoll = null;
         this.clearScheduledAdvance();
         this.enableRoll(true);
-        this.enableConfirm(false);
-        this.enableCancel(false);
         this.updateStatus(this.turnStatusText());
         this.logPanel?.append(`${this.players[this.currentPlayer].name} turn`);
         this.updateTokenHighlights();
         this.board.clearHover();
         if (this.isCurrentPlayerAI()) {
             this.enableRoll(false);
-            this.enableConfirm(false);
-            this.enableCancel(false);
             this.updateStatus('Jimmy is thinking...');
             setTimeout(() => this.handleAIRoll(), 400);
         }
@@ -361,8 +344,6 @@ export class Game {
         );
         this.statistics?.recordRoll(this.currentPlayer, this.lastRoll);
         this.enableRoll(false);
-        this.enableCancel(false);
-        this.enableConfirm(false);
         this.updateTokenHighlights();
 
         if (this.lastRoll === 0) {
@@ -431,11 +412,7 @@ export class Game {
             return;
         }
         this.pendingMove = move;
-        this.enableConfirm(true);
-        this.enableCancel(true);
-        this.updateStatus(
-            `Move piece ${piece.id + 1} by ${this.lastRoll} (tap Confirm or Cancel)`
-        );
+        this.confirmMove();
     }
 
     tryPrepareMove(piece, steps) {
@@ -527,13 +504,12 @@ export class Game {
         this.statistics?.syncPieces(this.players);
         this.updateTokenHighlights();
         this.board.clearHover();
-        this.board.clearHover();
         const isRosetta =
             move.targetSpace?.isRosetta ||
             (move.finishes && false); // finish does not trigger re-roll
 
         if (this.players[this.currentPlayer].allFinished()) {
-            this.showVictoryScreen();
+            this.showVictoryScreen(this.players[this.currentPlayer].name);
             this.logPanel?.append(`${this.players[this.currentPlayer].name} wins!`);
             return;
         }
@@ -541,8 +517,6 @@ export class Game {
         if (isRosetta) {
             this.pendingMove = null;
             this.lastRoll = null;
-            this.enableConfirm(false);
-            this.enableCancel(false);
             this.enableRoll(true);
             this.updateStatus(`${this.players[this.currentPlayer].name}: bonus roll`);
             this.logPanel?.append(`${this.players[this.currentPlayer].name} earned a bonus roll`);
@@ -557,16 +531,6 @@ export class Game {
         this.advanceTurn();
     }
 
-    cancelMove() {
-        this.pendingMove = null;
-        this.enableConfirm(false);
-        this.enableCancel(false);
-        if (this.lastRoll !== null) {
-            this.updateStatus(`Player ${this.currentPlayer + 1}: choose a piece`);
-        }
-        this.board.clearHover();
-    }
-
     advanceTurn() {
         const previousPlayer = this.currentPlayer;
         this.pendingMove = null;
@@ -577,16 +541,12 @@ export class Game {
             this.statistics?.setRound(this.round);
             this.logPanel?.append(`Round ${this.round}`);
         }
-        this.enableConfirm(false);
-        this.enableCancel(false);
         this.enableRoll(true);
         this.updateStatus(this.turnStatusText());
         this.logPanel?.append(`${this.players[this.currentPlayer].name} turn`);
         this.updateTokenHighlights();
         if (this.isCurrentPlayerAI()) {
             this.enableRoll(false);
-            this.enableConfirm(false);
-            this.enableCancel(false);
             this.updateStatus('Jimmy is thinking...');
             setTimeout(() => this.handleAIRoll(), 400);
         }
@@ -595,8 +555,6 @@ export class Game {
     scheduleAutoAdvance(message) {
         this.updateStatus(message);
         this.logPanel?.append(message);
-        this.enableConfirm(false);
-        this.enableCancel(false);
         this.clearScheduledAdvance();
         this.passTimeout = setTimeout(() => {
             this.advanceTurn();
