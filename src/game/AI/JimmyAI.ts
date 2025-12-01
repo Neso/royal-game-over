@@ -34,12 +34,6 @@ export class JimmyAI {
             return this.pickDeterministic(rosettaMoves);
         }
 
-        // Priority 1b (per spec wording): enter board (from hand)
-        const entryMoves = moves.filter(m => m.piece.positionIndex === null);
-        if (entryMoves.length) {
-            return this.pickDeterministic(entryMoves);
-        }
-
         // Priority 2: capture
         const captureMoves = moves.filter(m => !!m.captures);
         if (captureMoves.length) {
