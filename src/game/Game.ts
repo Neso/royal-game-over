@@ -29,6 +29,7 @@ export class Game {
     dice: Dice;
     players: Player[];
     currentPlayer: number;
+    round: number;
     pendingMove: PendingMove | null;
     lastRoll: number | null;
     passTimeout: ReturnType<typeof setTimeout> | null;
@@ -50,6 +51,7 @@ export class Game {
         this.dice = new Dice();
         this.players = [new Player(0, 0x1565c0), new Player(1, 0xffffff)];
         this.currentPlayer = 0;
+        this.round = 1;
         this.pendingMove = null;
         this.lastRoll = null;
         this.passTimeout = null;
@@ -218,6 +220,7 @@ export class Game {
     resetGameState() {
         this.players.forEach(player => player.reset());
         this.currentPlayer = 0;
+        this.round = 1;
         this.pendingMove = null;
         this.lastRoll = null;
         this.clearScheduledAdvance();
@@ -232,6 +235,7 @@ export class Game {
         this.logPanel?.append('New game started');
         this.logPanel?.append('Player 1 turn');
         this.statistics?.reset();
+        this.statistics?.setRound(this.round);
         this.statistics?.syncPieces(this.players);
 
         // wire piece tokens for interaction
@@ -460,9 +464,14 @@ export class Game {
     }
 
     advanceTurn() {
+        const previousPlayer = this.currentPlayer;
         this.pendingMove = null;
         this.lastRoll = null;
         this.currentPlayer = this.currentPlayer === 0 ? 1 : 0;
+        if (previousPlayer === 1 && this.currentPlayer === 0) {
+            this.round += 1;
+            this.statistics?.setRound(this.round);
+        }
         this.enableConfirm(false);
         this.enableCancel(false);
         this.enableRoll(true);

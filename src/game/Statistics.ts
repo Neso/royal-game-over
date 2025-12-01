@@ -16,6 +16,8 @@ export class Statistics {
     container: Container;
     data: Record<number, PlayerStats>;
     rows: Record<number, Text>;
+    round: number;
+    roundText: Text | null;
 
     constructor(app: any) {
         this.app = app;
@@ -25,10 +27,12 @@ export class Statistics {
             1: { counts: [0, 0, 0, 0, 0], total: 0, captures: 0, bonuses: 0, waiting: 0, home: 0 }
         };
         this.rows = {};
+        this.round = 1;
+        this.roundText = null;
     }
 
     init(opts: { x: number; y: number; width?: number; height?: number }) {
-        const { x, y, width = 240, height = 140 } = opts;
+        const { x, y, width = 240, height = 200 } = opts;
         this.container.x = x;
         this.container.y = y;
 
@@ -43,11 +47,17 @@ export class Statistics {
         title.y = 8;
         this.container.addChild(title);
 
+        const roundText = new Text('Round 1', { fill: 0xffffff, fontSize: 12 });
+        roundText.x = width - 90;
+        roundText.y = 8;
+        this.roundText = roundText;
+        this.container.addChild(roundText);
+
         const colWidth = (width - 30) / 2;
         [0, 1].forEach(playerId => {
             const header = new Text(`Player ${playerId + 1}`, { fill: 0xffffff, fontSize: 12 });
             header.x = 10 + playerId * (colWidth + 10);
-            header.y = 28;
+            header.y = 32;
             this.container.addChild(header);
 
             const row = new Text('', { fill: 0xffffff, fontSize: 11 });
@@ -63,6 +73,8 @@ export class Statistics {
     reset() {
         this.data[0] = { counts: [0, 0, 0, 0, 0], total: 0, captures: 0, bonuses: 0, waiting: 0, home: 0 };
         this.data[1] = { counts: [0, 0, 0, 0, 0], total: 0, captures: 0, bonuses: 0, waiting: 0, home: 0 };
+        this.round = 1;
+        this.updateRoundText();
         this.render();
     }
 
@@ -72,6 +84,17 @@ export class Statistics {
         this.data[playerId].counts[clamped] += 1;
         this.data[playerId].total += 1;
         this.render();
+    }
+
+    setRound(round: number) {
+        this.round = round;
+        this.updateRoundText();
+    }
+
+    private updateRoundText() {
+        if (this.roundText) {
+            this.roundText.text = `Round ${this.round}`;
+        }
     }
 
     recordCapture(playerId: number) {
