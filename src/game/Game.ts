@@ -7,6 +7,8 @@ import { LogPanel } from './UI/LogPanel.js';
 import { Dice } from './Dice.js';
 import { Player } from './Player.js';
 import { Statistics } from './Statistics.js';
+import { GameModeScreen } from './UI/GameModeScreen.js';
+import { JimmyAI } from './AI/JimmyAI.js';
 import boardTextureUrl from '../assets/board.png';
 
 type PendingMove = {
@@ -25,6 +27,9 @@ export class Game {
     victoryScreen: VictoryScreen;
     logPanel: LogPanel;
     statistics: Statistics;
+    modeScreen: GameModeScreen;
+    gameMode: 'hotseat' | 'ai';
+    ai: JimmyAI | null;
 
     dice: Dice;
     players: Player[];
@@ -48,6 +53,9 @@ export class Game {
         this.victoryScreen = new VictoryScreen(this.app, this.showMainMenu.bind(this));
         this.logPanel = new LogPanel(this.app);
         this.statistics = new Statistics(this.app);
+        this.modeScreen = new GameModeScreen(this.app, mode => this.startGame(mode));
+        this.gameMode = 'hotseat';
+        this.ai = null;
 
         this.dice = new Dice();
         this.players = [new Player(0, 0x1565c0), new Player(1, 0xffffff)];
@@ -74,12 +82,14 @@ export class Game {
         this.app.stage.addChild(this.mainMenu);
         this.app.stage.addChild(this.rulesScreen);
         this.app.stage.addChild(this.victoryScreen);
+        this.app.stage.addChild(this.modeScreen);
 
         this.mainMenu.alignMenu();
         this.rulesScreen.alignScreen();
         this.victoryScreen.alignScreen();
+        this.modeScreen.align();
 
-        this.mainMenu.onStartGame = this.startGame.bind(this);
+        this.mainMenu.onStartGame = this.showModeSelect.bind(this);
         this.mainMenu.onShowRules = this.showRulesScreen.bind(this);
 
         this.setupGameplayUI();
@@ -157,6 +167,7 @@ export class Game {
             this.mainMenu.alignMenu();
             this.rulesScreen.alignScreen();
             this.victoryScreen.alignScreen();
+            this.modeScreen.align();
             const logWidth = 180;
             const margin = 10;
             this.logPanel.setPosition(this.app.screen.width - logWidth - margin, margin);
@@ -193,6 +204,7 @@ export class Game {
         this.mainMenu.show();
         this.rulesScreen.hide();
         this.victoryScreen.hide();
+        this.modeScreen.hide();
         this.controls.visible = false;
         if (this.statistics?.container) {
             this.statistics.container.visible = false;
@@ -200,6 +212,15 @@ export class Game {
         if (this.logPanel?.container) {
             this.logPanel.container.visible = false;
         }
+    }
+
+    showModeSelect() {
+        this.mainMenu.hide();
+        this.rulesScreen.hide();
+        this.victoryScreen.hide();
+        this.controls.visible = false;
+        this.modeScreen.show();
+        this.modeScreen.align();
     }
 
     showRulesScreen() {
@@ -228,10 +249,11 @@ export class Game {
         }
     }
 
-    startGame() {
+    startGame(mode: 'hotseat' | 'ai') {
         this.mainMenu.hide();
         this.rulesScreen.hide();
         this.victoryScreen.hide();
+        this.modeScreen.hide();
         this.controls.visible = true;
         if (this.statistics?.container) {
             this.statistics.container.visible = true;
@@ -239,11 +261,18 @@ export class Game {
         if (this.logPanel?.container) {
             this.logPanel.container.visible = true;
         }
-        this.resetGameState();
+        this.resetGameState(mode);
         this.beginTurn();
     }
 
-    resetGameState() {
+    resetGameState(mode: 'hotseat' | 'ai') {
+        this.gameMode = mode;
+        // Recreate players to refresh names/flags
+        this.players = [
+            new Player(0, 0x1565c0, 'Player 1', false),
+            new Player(1, 0xffffff, mode === 'ai' ? 'Jimmy' : 'Player 2', mode === 'ai')
+        ];
+        this.ai = mode === 'ai' ? new JimmyAI(1, this.board) : null;
         this.players.forEach(player => player.reset());
         this.startingPlayer = Math.random() < 0.5 ? 0 : 1;
         this.currentPlayer = this.startingPlayer;
@@ -252,7 +281,7 @@ export class Game {
         this.lastRoll = null;
         this.clearScheduledAdvance();
         this.board.updatePieces(this.getAllPieces());
-        this.updateStatus(`Player ${this.currentPlayer + 1}: roll the dice`);
+        this.updateStatus(this.turnStatusText());
         this.enableRoll(true);
         this.enableConfirm(false);
         this.enableCancel(false);
@@ -261,7 +290,7 @@ export class Game {
         this.logPanel?.append(`Game started at ${startStamp}`);
         this.logPanel?.append('New game started');
         this.logPanel?.append(`Round ${this.round}`);
-        this.logPanel?.append(`Starting player: Player ${this.currentPlayer + 1}`);
+        this.logPanel?.append(`Starting player: ${this.players[this.currentPlayer].name}`);
         this.statistics?.reset();
         this.statistics?.setRound(this.round);
         this.statistics?.setStartingPlayer(this.startingPlayer);
@@ -306,9 +335,16 @@ export class Game {
         this.enableRoll(true);
         this.enableConfirm(false);
         this.enableCancel(false);
-        this.updateStatus(`Player ${this.currentPlayer + 1}: roll the dice`);
-        this.logPanel?.append(`Player ${this.currentPlayer + 1} turn`);
+        this.updateStatus(this.turnStatusText());
+        this.logPanel?.append(`${this.players[this.currentPlayer].name} turn`);
         this.updateTokenHighlights();
+        if (this.isCurrentPlayerAI()) {
+            this.enableRoll(false);
+            this.enableConfirm(false);
+            this.enableCancel(false);
+            this.updateStatus('Jimmy is thinking...');
+            setTimeout(() => this.handleAIRoll(), 400);
+        }
     }
 
     handleRoll() {
@@ -316,7 +352,7 @@ export class Game {
         this.lastRoll = result.successes;
         this.updateStatus(`Rolled ${result.rolls.join(', ')} → ${result.successes} moves`);
         this.logPanel?.append(
-            `Player ${this.currentPlayer + 1} rolled ${result.successes} (${result.rolls.join(', ')})`
+            `${this.players[this.currentPlayer].name} rolled ${result.successes} (${result.rolls.join(', ')})`
         );
         this.statistics?.recordRoll(this.currentPlayer, this.lastRoll);
         this.enableRoll(false);
@@ -334,10 +370,38 @@ export class Game {
         }
     }
 
+    async handleAIRoll() {
+        if (!this.isCurrentPlayerAI()) return;
+        const roll = this.dice.roll();
+        this.lastRoll = roll.successes;
+        this.logPanel?.append(`Jimmy rolled ${roll.successes} (${roll.rolls.join(', ')})`);
+        this.statistics?.recordRoll(this.currentPlayer, this.lastRoll);
+        this.updateTokenHighlights();
+
+        if (this.lastRoll === 0) {
+            this.scheduleAutoAdvance('Jimmy has no moves, passing turn');
+            return;
+        }
+
+        const moves = this.getAvailableMoves(this.currentPlayer, this.lastRoll);
+        const choice = this.ai?.chooseMove({ board: this.board, players: this.players }, moves) || null;
+        if (!choice) {
+            this.scheduleAutoAdvance('Jimmy has no valid moves, passing turn');
+            return;
+        }
+        this.pendingMove = choice;
+        this.confirmMove();
+    }
+
     hasAnyValidMove(playerId, steps) {
+        return this.getAvailableMoves(playerId, steps).length > 0;
+    }
+
+    getAvailableMoves(playerId: number, steps: number) {
         return this.players[playerId].pieces
             .filter(piece => !piece.isFinished())
-            .some(piece => this.tryPrepareMove(piece, steps));
+            .map(piece => this.tryPrepareMove(piece, steps))
+            .filter(move => move !== null) as PendingMove[];
     }
 
     handlePieceClick(key) {
@@ -436,7 +500,7 @@ export class Game {
         if (move.captures) {
             move.captures.reset();
             this.logPanel?.append(
-                `Player ${this.currentPlayer + 1} captured piece ${move.captures.id + 1}`
+                `${this.players[this.currentPlayer].name} captured piece ${move.captures.id + 1}`
             );
             this.statistics?.recordCapture(this.currentPlayer);
         }
@@ -445,12 +509,12 @@ export class Game {
             move.piece.finished = true;
             move.piece.positionIndex = null;
             this.logPanel?.append(
-                `Player ${this.currentPlayer + 1} moved piece ${move.piece.id + 1} off the board`
+                `${this.players[this.currentPlayer].name} moved piece ${move.piece.id + 1} off the board`
             );
         } else {
             move.piece.positionIndex = move.targetIndex;
             this.logPanel?.append(
-                `Player ${this.currentPlayer + 1} moved piece ${move.piece.id + 1} to ${move.targetSpace.id}`
+                `${this.players[this.currentPlayer].name} moved piece ${move.piece.id + 1} to ${move.targetSpace.id}`
             );
         }
 
@@ -463,7 +527,7 @@ export class Game {
 
         if (this.players[this.currentPlayer].allFinished()) {
             this.showVictoryScreen();
-            this.logPanel?.append(`Player ${this.currentPlayer + 1} wins!`);
+            this.logPanel?.append(`${this.players[this.currentPlayer].name} wins!`);
             return;
         }
 
@@ -473,10 +537,13 @@ export class Game {
             this.enableConfirm(false);
             this.enableCancel(false);
             this.enableRoll(true);
-            this.updateStatus(`Player ${this.currentPlayer + 1}: bonus roll`);
-            this.logPanel?.append(`Player ${this.currentPlayer + 1} earned a bonus roll`);
+            this.updateStatus(`${this.players[this.currentPlayer].name}: bonus roll`);
+            this.logPanel?.append(`${this.players[this.currentPlayer].name} earned a bonus roll`);
             this.statistics?.recordBonus(this.currentPlayer);
             this.updateTokenHighlights();
+            if (this.isCurrentPlayerAI()) {
+                setTimeout(() => this.handleAIRoll(), 300);
+            }
             return;
         }
 
@@ -505,9 +572,16 @@ export class Game {
         this.enableConfirm(false);
         this.enableCancel(false);
         this.enableRoll(true);
-        this.updateStatus(`Player ${this.currentPlayer + 1}: roll the dice`);
-        this.logPanel?.append(`Player ${this.currentPlayer + 1} turn`);
+        this.updateStatus(this.turnStatusText());
+        this.logPanel?.append(`${this.players[this.currentPlayer].name} turn`);
         this.updateTokenHighlights();
+        if (this.isCurrentPlayerAI()) {
+            this.enableRoll(false);
+            this.enableConfirm(false);
+            this.enableCancel(false);
+            this.updateStatus('Jimmy is thinking...');
+            setTimeout(() => this.handleAIRoll(), 400);
+        }
     }
 
     scheduleAutoAdvance(message) {
@@ -551,5 +625,14 @@ export class Game {
             token.eventMode = disabled ? 'none' : 'static';
             token.cursor = disabled ? 'not-allowed' : 'pointer';
         });
+    }
+
+    isCurrentPlayerAI() {
+        return this.players[this.currentPlayer]?.isAI;
+    }
+
+    turnStatusText() {
+        const name = this.players[this.currentPlayer]?.name || `Player ${this.currentPlayer + 1}`;
+        return `${name}: roll the dice`;
     }
 }
