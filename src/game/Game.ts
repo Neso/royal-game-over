@@ -7,6 +7,7 @@ import { LogPanel } from './UI/LogPanel.js';
 import { Dice } from './Dice.js';
 import { Player } from './Player.js';
 import { Statistics } from './Statistics.js';
+import boardTextureUrl from '../assets/board.png';
 
 type PendingMove = {
     piece: Player['pieces'][number];
@@ -84,7 +85,7 @@ export class Game {
     }
 
     async loadAssets() {
-        await Assets.load('/src/assets/board.png');
+        await Assets.load(boardTextureUrl);
     }
 
     setupGameplayUI() {
