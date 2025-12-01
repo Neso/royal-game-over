@@ -84,6 +84,11 @@ export class LogPanel {
         this.container.on('pointerupoutside', () => this.stopDrag());
     }
 
+    setPosition(x: number, y: number) {
+        this.container.x = x;
+        this.container.y = y;
+    }
+
     reset() {
         this.entries = [];
         this.scrollOffset = 0;

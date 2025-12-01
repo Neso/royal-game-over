@@ -85,6 +85,7 @@ export class Game {
         this.setupGameplayUI();
         this.setupLogPanel();
         this.setupStatistics();
+        this.setupResizeHandling();
         this.showMainMenu();
     }
 
@@ -143,6 +144,29 @@ export class Game {
         this.statistics.init({ x, y, width: 220, height: 200 });
         this.statistics.container.visible = false;
         this.app.stage.addChild(this.statistics.container);
+    }
+
+    setupResizeHandling() {
+        const resize = () => {
+            const width = window.innerWidth;
+            const height = window.innerHeight;
+            this.app.renderer.resize(width, height);
+            this.app.canvas.style.width = `${width}px`;
+            this.app.canvas.style.height = `${height}px`;
+            this.board.handleResize();
+            this.mainMenu.alignMenu();
+            this.rulesScreen.alignScreen();
+            this.victoryScreen.alignScreen();
+            const logWidth = 180;
+            const margin = 10;
+            this.logPanel.setPosition(this.app.screen.width - logWidth - margin, margin);
+            this.statistics.container.x = this.controls?.x ?? 10;
+            this.statistics.container.y = (this.controls?.y ?? 10) + 140;
+            this.board.updatePieces(this.getAllPieces());
+            this.updateTokenHighlights();
+        };
+        window.addEventListener('resize', resize);
+        resize();
     }
 
     createButton(label, onClick, x, y) {

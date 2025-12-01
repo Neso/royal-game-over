@@ -15,6 +15,8 @@ export type BoardSpace = {
 export class Board {
     app: Application;
     sprite: Sprite | null;
+    baseWidth: number;
+    baseHeight: number;
     grid: { cols: number; rows: number };
     spaces: BoardSpace[];
     paths: Record<number, BoardSpace[]>;
@@ -25,6 +27,8 @@ export class Board {
     constructor(app: Application) {
         this.app = app;
         this.sprite = null;
+        this.baseWidth = 0;
+        this.baseHeight = 0;
         this.grid = { cols: 3, rows: 8 };
         this.spaces = [];
         this.paths = { 0: [], 1: [] };
@@ -37,13 +41,10 @@ export class Board {
         await Assets.load(boardTextureUrl);
         const texture = Assets.get(boardTextureUrl);
         this.sprite = new Sprite(texture);
+        this.baseWidth = texture.width;
+        this.baseHeight = texture.height;
         this.sprite.anchor.set(0.5);
-        this.sprite.x = this.app.screen.width / 2;
-        this.sprite.y = this.app.screen.height / 2;
-
-        const scaleX = this.app.screen.width / this.sprite.width;
-        const scaleY = this.app.screen.height / this.sprite.height;
-        this.sprite.scale.set(Math.min(scaleX, scaleY));
+        this.applyScaleAndPosition();
 
         this.app.stage.addChild(this.sprite);
         this.app.stage.addChild(this.spaceLayer);
@@ -51,6 +52,22 @@ export class Board {
 
         this.initBoardSpaces();
         this.drawBoardSpaces();
+    }
+
+    applyScaleAndPosition() {
+        if (!this.sprite) return;
+        this.sprite.x = this.app.screen.width / 2;
+        this.sprite.y = this.app.screen.height / 2;
+        const scaleX = this.app.screen.width / this.baseWidth;
+        const scaleY = this.app.screen.height / this.baseHeight;
+        this.sprite.scale.set(Math.min(scaleX, scaleY));
+    }
+
+    handleResize() {
+        if (!this.sprite) return;
+        this.applyScaleAndPosition();
+        this.updateSpacePositions();
+        this.redrawBoardSpaces();
     }
 
     cellToWorld(col: number, row: number) {
@@ -199,6 +216,17 @@ export class Board {
             graphics.y = space.position.y;
 
             this.spaceLayer.addChild(graphics);
+        });
+    }
+
+    redrawBoardSpaces() {
+        this.spaceLayer.removeChildren();
+        this.drawBoardSpaces();
+    }
+
+    updateSpacePositions() {
+        this.spaces.forEach(space => {
+            space.position = this.cellToWorld(space.col, space.row);
         });
     }
 
